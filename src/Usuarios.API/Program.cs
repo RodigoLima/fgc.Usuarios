@@ -42,11 +42,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                    .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
 
-var jwtKeyConfig = builder.Configuration["JWT:Key"];
+var jwtKeyConfig = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrEmpty(jwtKeyConfig))
-    throw new InvalidOperationException("JWT:Key configuration is missing or empty.");
+    throw new InvalidOperationException("Jwt:Key configuration is missing or empty.");
 
-builder.Services.Configure<TokenConfiguration>(builder.Configuration.GetSection("JWT"));
+builder.Services.Configure<TokenConfiguration>(builder.Configuration.GetSection("Jwt"));
 
 builder.Services.AddAuthentication(o =>
 {
