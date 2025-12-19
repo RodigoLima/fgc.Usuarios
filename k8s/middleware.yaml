@@ -1,10 +1,10 @@
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: usuarios-strip         
-  namespace: usuarios
+  name: users-strip         
+  namespace: users
 spec:
   stripPrefix:
     prefixes:
-      - /api/usuarios
+      - /api/users
     forceSlash: false

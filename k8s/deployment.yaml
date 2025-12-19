@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: usuarios-deployment
-  namespace: usuarios
+  name: users-deployment
+  namespace: users
   labels:
-    app: usuarios
+    app: users
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: usuarios
+      app: users
   template:
     metadata:
       labels:
-        app: usuarios
+        app: users
     spec:
       containers:
-      - name: usuarios
+      - name: users
         image: ${DOCKER_IMAGE_FULL}
         ports:
         - containerPort: 80
@@ -30,9 +30,9 @@ spec:
             memory: "512Mi"
         envFrom:
         - configMapRef:
-            name: usuarios-config
+            name: users-config
         - secretRef:
-            name: usuarios-secret
+            name: users-secret
         livenessProbe:
           httpGet:
             path: /health

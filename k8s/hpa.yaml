@@ -1,15 +1,15 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: usuarios-hpa
-  namespace: usuarios
+  name: users-hpa
+  namespace: users
   labels:
-    app: usuarios
+    app: users
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: usuarios-deployment
+    name: users-deployment
   minReplicas: 1
   maxReplicas: 5
   metrics:
