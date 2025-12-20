@@ -58,7 +58,7 @@ jobs:
       - name: Prepare K8s manifests
         env:
           DOCKER_IMAGE_FULL: ${{ steps.build-push.outputs.DOCKER_IMAGE_FULL }}
-          DATABASE_POSTGRES_CONNECTION_STRING: ${{ secrets.USERS_POSTGRES_CONNECTION }}
+          DB_VAL: ${{ secrets.USERS_DB_STRING }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
@@ -74,8 +74,8 @@ jobs:
             echo "ERRO: DOCKER_IMAGE_FULL não está definido"
             exit 1
           fi
-          if [ -z "$DATABASE_POSTGRES_CONNECTION_STRING" ]; then
-            echo "ERRO: DATABASE_POSTGRES_CONNECTION_STRING não está definido"
+          if [ -z "$DB_VAL" ]; then
+            echo "ERRO: DB_VAL não está definido"
             exit 1
           fi
           if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
@@ -88,7 +88,7 @@ jobs:
           fi
           
           mkdir -p k8s/users/processed
-          export DOCKER_IMAGE_FULL DATABASE_POSTGRES_CONNECTION_STRING AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_ACCOUNT_ID JWT_KEY JWT_EXPIRATION_TIME_HOUR JWT_INCREASE_EXPIRATION_TIME_MINUTES
+          export DOCKER_IMAGE_FULL DB_VAL AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_ACCOUNT_ID JWT_KEY JWT_EXPIRATION_TIME_HOUR JWT_INCREASE_EXPIRATION_TIME_MINUTES
           
           echo "Processando arquivos YAML..."
           if command -v envsubst >/dev/null 2>&1; then
@@ -97,7 +97,7 @@ jobs:
             envsubst < k8s/deployment.yaml > k8s/users/processed/deployment.yaml
           else
             sed -e "s|\${DOCKER_IMAGE_FULL}|${DOCKER_IMAGE_FULL}|g" \
-                -e "s|\${DATABASE_POSTGRES_CONNECTION_STRING}|${DATABASE_POSTGRES_CONNECTION_STRING}|g" \
+                -e "s|\${DB_VAL}|${DB_VAL}|g" \
                 -e "s|\${AWS_ACCESS_KEY_ID}|${AWS_ACCESS_KEY_ID}|g" \
                 -e "s|\${AWS_SECRET_ACCESS_KEY}|${AWS_SECRET_ACCESS_KEY}|g" \
                 -e "s|\${AWS_SESSION_TOKEN}|${AWS_SESSION_TOKEN}|g" \
@@ -106,7 +106,7 @@ jobs:
                 -e "s|\${JWT_EXPIRATION_TIME_HOUR}|${JWT_EXPIRATION_TIME_HOUR}|g" \
                 -e "s|\${JWT_INCREASE_EXPIRATION_TIME_MINUTES}|${JWT_INCREASE_EXPIRATION_TIME_MINUTES}|g" \
                 k8s/configmap.yaml > k8s/users/processed/configmap.yaml
-            sed -e "s|\${DATABASE_POSTGRES_CONNECTION_STRING}|${DATABASE_POSTGRES_CONNECTION_STRING}|g" \
+            sed -e "s|\${DB_VAL}|${DB_VAL}|g" \
                 -e "s|\${AWS_ACCESS_KEY_ID}|${AWS_ACCESS_KEY_ID}|g" \
                 -e "s|\${AWS_SECRET_ACCESS_KEY}|${AWS_SECRET_ACCESS_KEY}|g" \
                 -e "s|\${AWS_SESSION_TOKEN}|${AWS_SESSION_TOKEN}|g" \
