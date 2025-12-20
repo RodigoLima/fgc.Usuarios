@@ -34,6 +34,22 @@ using Usuarios.Infrastructure.Data.Repositories;
 using Usuarios.Infrastructure.Helpers;
 using static Usuarios.API.Constants.AppConstants;
 
+// Função auxiliar para mascarar connection string nos logs
+static string MaskConnectionString(string connectionString)
+{
+    if (string.IsNullOrWhiteSpace(connectionString))
+        return "(vazia)";
+    
+    // Mascara senha e outros dados sensíveis
+    var masked = connectionString;
+    var passwordMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Password=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    if (passwordMatch.Success)
+    {
+        masked = masked.Replace(passwordMatch.Value, "Password=***");
+    }
+    return masked;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 // builder.WebHost.UseUrls("http://*:80");
 var env = builder.Environment;
@@ -154,8 +170,22 @@ builder.Logging.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderCon
     LogLevel = LogLevel.Information
 }));
 
+// Resolver connection string usando o provider (prioriza variáveis de ambiente)
+var connectionString = Usuarios.Infrastructure.Data.ConnectionStringProvider.Resolve(builder.Configuration);
+
+// Log da connection string (mascarada para segurança)
+if (!string.IsNullOrWhiteSpace(connectionString))
+{
+    var masked = MaskConnectionString(connectionString);
+    Console.WriteLine($"[ConnectionString] Resolvida: {masked}");
+}
+else
+{
+    Console.WriteLine("[ConnectionString] ⚠️ ATENÇÃO: Connection string está VAZIA!");
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddMemoryCache();
 
