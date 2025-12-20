@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  ECR_REPOSITORY: usuarios-service
+  ECR_REPOSITORY: users-service
   IMAGE_TAG: latest
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
       - name: Prepare K8s manifests
         env:
           DOCKER_IMAGE_FULL: ${{ steps.build-push.outputs.DOCKER_IMAGE_FULL }}
-          DATABASE_POSTGRES_CONNECTION_STRING: ${{ secrets.USUARIOS_POSTGRES_CONNECTION }}
+          DATABASE_POSTGRES_CONNECTION_STRING: ${{ secrets.USERS_POSTGRES_CONNECTION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
@@ -87,14 +87,14 @@ jobs:
             exit 1
           fi
           
-          mkdir -p k8s/usuarios/processed
+          mkdir -p k8s/users/processed
           export DOCKER_IMAGE_FULL DATABASE_POSTGRES_CONNECTION_STRING AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_ACCOUNT_ID JWT_KEY JWT_EXPIRATION_TIME_HOUR JWT_INCREASE_EXPIRATION_TIME_MINUTES
           
           echo "Processando arquivos YAML..."
           if command -v envsubst >/dev/null 2>&1; then
-            envsubst < k8s/configmap.yaml > k8s/usuarios/processed/configmap.yaml
-            envsubst < k8s/secret.yaml > k8s/usuarios/processed/secret.yaml
-            envsubst < k8s/deployment.yaml > k8s/usuarios/processed/deployment.yaml
+            envsubst < k8s/configmap.yaml > k8s/users/processed/configmap.yaml
+            envsubst < k8s/secret.yaml > k8s/users/processed/secret.yaml
+            envsubst < k8s/deployment.yaml > k8s/users/processed/deployment.yaml
           else
             sed -e "s|\${DOCKER_IMAGE_FULL}|${DOCKER_IMAGE_FULL}|g" \
                 -e "s|\${DATABASE_POSTGRES_CONNECTION_STRING}|${DATABASE_POSTGRES_CONNECTION_STRING}|g" \
@@ -105,7 +105,7 @@ jobs:
                 -e "s|\${JWT_KEY}|${JWT_KEY}|g" \
                 -e "s|\${JWT_EXPIRATION_TIME_HOUR}|${JWT_EXPIRATION_TIME_HOUR}|g" \
                 -e "s|\${JWT_INCREASE_EXPIRATION_TIME_MINUTES}|${JWT_INCREASE_EXPIRATION_TIME_MINUTES}|g" \
-                k8s/configmap.yaml > k8s/usuarios/processed/configmap.yaml
+                k8s/configmap.yaml > k8s/users/processed/configmap.yaml
             sed -e "s|\${DATABASE_POSTGRES_CONNECTION_STRING}|${DATABASE_POSTGRES_CONNECTION_STRING}|g" \
                 -e "s|\${AWS_ACCESS_KEY_ID}|${AWS_ACCESS_KEY_ID}|g" \
                 -e "s|\${AWS_SECRET_ACCESS_KEY}|${AWS_SECRET_ACCESS_KEY}|g" \
@@ -113,29 +113,29 @@ jobs:
                 -e "s|\${JWT_KEY}|${JWT_KEY}|g" \
                 -e "s|\${JWT_EXPIRATION_TIME_HOUR}|${JWT_EXPIRATION_TIME_HOUR}|g" \
                 -e "s|\${JWT_INCREASE_EXPIRATION_TIME_MINUTES}|${JWT_INCREASE_EXPIRATION_TIME_MINUTES}|g" \
-                k8s/secret.yaml > k8s/usuarios/processed/secret.yaml
+                k8s/secret.yaml > k8s/users/processed/secret.yaml
             sed -e "s|\${DOCKER_IMAGE_FULL}|${DOCKER_IMAGE_FULL}|g" \
-                k8s/deployment.yaml > k8s/usuarios/processed/deployment.yaml
+                k8s/deployment.yaml > k8s/users/processed/deployment.yaml
           fi
           
-          cp k8s/service.yaml k8s/usuarios/processed/service.yaml
-          cp k8s/hpa.yaml k8s/usuarios/processed/hpa.yaml
+          cp k8s/service.yaml k8s/users/processed/service.yaml
+          cp k8s/hpa.yaml k8s/users/processed/hpa.yaml
           if [ -f k8s/ingress.yaml ]; then
-            cp k8s/ingress.yaml k8s/usuarios/processed/ingress.yaml
+            cp k8s/ingress.yaml k8s/users/processed/ingress.yaml
           fi
           if [ -f k8s/middleware.yaml ]; then
-            cp k8s/middleware.yaml k8s/usuarios/processed/middleware.yaml
+            cp k8s/middleware.yaml k8s/users/processed/middleware.yaml
           fi
           if [ -f k8s/namespace.yaml ]; then
-            cp k8s/namespace.yaml k8s/usuarios/processed/namespace.yaml
+            cp k8s/namespace.yaml k8s/users/processed/namespace.yaml
           else
             echo "Aviso: namespace.yaml não encontrado, será criado automaticamente"
           fi
           
           if [ -f k8s/traefik/service.yaml ]; then
             echo "📋 Copiando traefik/service.yaml..."
-            cp k8s/traefik/service.yaml k8s/usuarios/processed/traefik-service.yaml
-            if [ ! -f k8s/usuarios/processed/traefik-service.yaml ]; then
+            cp k8s/traefik/service.yaml k8s/users/processed/traefik-service.yaml
+            if [ ! -f k8s/users/processed/traefik-service.yaml ]; then
               echo "❌ ERRO: Falha ao copiar traefik/service.yaml"
               exit 1
             fi
@@ -146,11 +146,11 @@ jobs:
           
           if [ -f k8s/traefik/service-backup.yaml ]; then
             echo "📋 Copiando traefik/service-backup.yaml..."
-            cp k8s/traefik/service-backup.yaml k8s/usuarios/processed/traefik-service-backup.yaml
+            cp k8s/traefik/service-backup.yaml k8s/users/processed/traefik-service-backup.yaml
             echo "✅ traefik-service-backup.yaml copiado com sucesso"
           fi
           
-          if grep -r '\${' k8s/usuarios/processed/*.yaml 2>/dev/null; then
+          if grep -r '\${' k8s/users/processed/*.yaml 2>/dev/null; then
             echo "ERRO: Variáveis não substituídas encontradas"
             exit 1
           fi
@@ -263,8 +263,8 @@ jobs:
           set -e
           
           # Criar namespace se não existir
-          if [ -f k8s/usuarios/processed/namespace.yaml ]; then
-            kubectl apply -f k8s/usuarios/processed/namespace.yaml
+          if [ -f k8s/users/processed/namespace.yaml ]; then
+            kubectl apply -f k8s/users/processed/namespace.yaml
           else
             kubectl create namespace users --dry-run=client -o yaml | kubectl apply -f -
           fi
@@ -298,59 +298,59 @@ jobs:
             --docker-password="$TOKEN" \
             --namespace=users || exit 1
           
-          CURRENT_IMAGE=$(kubectl get deployment usuarios-deployment -n users -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
-          NEW_IMAGE=$(grep "image:" k8s/usuarios/processed/deployment.yaml | awk '{print $2}' | tr -d '"')
+          CURRENT_IMAGE=$(kubectl get deployment users-deployment -n users -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+          NEW_IMAGE=$(grep "image:" k8s/users/processed/deployment.yaml | awk '{print $2}' | tr -d '"')
           
           CONFIGMAP_CHANGED=false
           SECRET_CHANGED=false
           
-          if kubectl get configmap usuarios-config -n users >/dev/null 2>&1; then
-            OLD_CONFIGMAP=$(kubectl get configmap usuarios-config -n users -o yaml | grep -A 100 "^data:" | sort)
-            kubectl apply -f k8s/usuarios/processed/configmap.yaml >/dev/null 2>&1
-            NEW_CONFIGMAP=$(kubectl get configmap usuarios-config -n users -o yaml | grep -A 100 "^data:" | sort)
+          if kubectl get configmap users-config -n users >/dev/null 2>&1; then
+            OLD_CONFIGMAP=$(kubectl get configmap users-config -n users -o yaml | grep -A 100 "^data:" | sort)
+            kubectl apply -f k8s/users/processed/configmap.yaml >/dev/null 2>&1
+            NEW_CONFIGMAP=$(kubectl get configmap users-config -n users -o yaml | grep -A 100 "^data:" | sort)
             if [ "$OLD_CONFIGMAP" != "$NEW_CONFIGMAP" ]; then
               CONFIGMAP_CHANGED=true
               echo "🔄 ConfigMap mudou. Deployment será reiniciado."
             fi
           else
-            kubectl apply -f k8s/usuarios/processed/configmap.yaml >/dev/null 2>&1
+            kubectl apply -f k8s/users/processed/configmap.yaml >/dev/null 2>&1
             CONFIGMAP_CHANGED=true
             echo "🆕 ConfigMap criado. Deployment será reiniciado."
           fi
           
-          if kubectl get secret usuarios-secret -n users >/dev/null 2>&1; then
-            OLD_SECRET=$(kubectl get secret usuarios-secret -n users -o yaml | grep -A 100 "^data:" | sort)
-            kubectl apply -f k8s/usuarios/processed/secret.yaml >/dev/null 2>&1
-            NEW_SECRET=$(kubectl get secret usuarios-secret -n users -o yaml | grep -A 100 "^data:" | sort)
+          if kubectl get secret users-secret -n users >/dev/null 2>&1; then
+            OLD_SECRET=$(kubectl get secret users-secret -n users -o yaml | grep -A 100 "^data:" | sort)
+            kubectl apply -f k8s/users/processed/secret.yaml >/dev/null 2>&1
+            NEW_SECRET=$(kubectl get secret users-secret -n users -o yaml | grep -A 100 "^data:" | sort)
             if [ "$OLD_SECRET" != "$NEW_SECRET" ]; then
               SECRET_CHANGED=true
               echo "🔄 Secret mudou. Deployment será reiniciado."
             fi
           else
-            kubectl apply -f k8s/usuarios/processed/secret.yaml >/dev/null 2>&1
+            kubectl apply -f k8s/users/processed/secret.yaml >/dev/null 2>&1
             SECRET_CHANGED=true
             echo "🆕 Secret criado. Deployment será reiniciado."
           fi
           
-          kubectl apply -f k8s/usuarios/processed/deployment.yaml
+          kubectl apply -f k8s/users/processed/deployment.yaml
           
-          kubectl apply -f k8s/usuarios/processed/service.yaml
-          kubectl apply -f k8s/usuarios/processed/hpa.yaml
+          kubectl apply -f k8s/users/processed/service.yaml
+          kubectl apply -f k8s/users/processed/hpa.yaml
           
-          if [ -f k8s/usuarios/processed/middleware.yaml ]; then
+          if [ -f k8s/users/processed/middleware.yaml ]; then
             if kubectl get crd middlewares.traefik.containo.us >/dev/null 2>&1; then
 
               kubectl delete middleware stripprefix -n users --ignore-not-found
-              kubectl delete middleware usuarios-stripprefix -n users --ignore-not-found
+              kubectl delete middleware users-stripprefix -n users --ignore-not-found
   
               echo "✅ Aplicando middleware do Traefik..."
-              if kubectl apply -f k8s/usuarios/processed/middleware.yaml; then
+              if kubectl apply -f k8s/users/processed/middleware.yaml; then
                 echo "✅ Middleware aplicado com sucesso!"
                 echo "⏳ Aguardando middleware ficar disponível..."
                 sleep 5
                 
-                if kubectl get middleware usuarios-strip -n users >/dev/null 2>&1; then
-                  echo "✅ Middleware usuarios-strip confirmado no cluster"
+                if kubectl get middleware users-strip -n users >/dev/null 2>&1; then
+                  echo "✅ Middleware users-strip confirmado no cluster"
                 else
                   echo "⚠️  Middleware não encontrado após aplicação. Verificando..."
                   kubectl get middleware -n users
@@ -364,9 +364,9 @@ jobs:
             fi
           fi
           
-          if [ -f k8s/usuarios/processed/ingress.yaml ]; then
+          if [ -f k8s/users/processed/ingress.yaml ]; then
             echo "Aplicando Ingress..."
-            if kubectl apply -f k8s/usuarios/processed/ingress.yaml; then
+            if kubectl apply -f k8s/users/processed/ingress.yaml; then
               echo "✅ Ingress aplicado com sucesso!"
               echo "⏳ Aguardando Traefik processar o Ingress..."
               sleep 5
@@ -375,7 +375,7 @@ jobs:
             fi
           fi
           
-          if [ -f k8s/usuarios/processed/traefik-service.yaml ]; then
+          if [ -f k8s/users/processed/traefik-service.yaml ]; then
             echo "🔍 Verificando se o Traefik Service já existe..."
             EXISTING_SVC=$(kubectl get svc traefik-loadbalancer -n kube-system 2>/dev/null || echo "")
             
@@ -451,7 +451,7 @@ jobs:
                 echo "   O LoadBalancer não será provisionado sem o Controller."
               fi
               
-              if kubectl apply -f k8s/usuarios/processed/traefik-service.yaml; then
+              if kubectl apply -f k8s/users/processed/traefik-service.yaml; then
                 echo "✅ Traefik Service aplicado com sucesso!"
                 
                 echo "📋 Verificando detalhes do service..."
@@ -523,8 +523,8 @@ jobs:
                 fi
               else
                 echo "⚠️  Erro ao aplicar traefik-service.yaml. Tentando service-backup.yaml..."
-                if [ -f k8s/usuarios/processed/traefik-service-backup.yaml ]; then
-                  kubectl apply -f k8s/usuarios/processed/traefik-service-backup.yaml
+                if [ -f k8s/users/processed/traefik-service-backup.yaml ]; then
+                  kubectl apply -f k8s/users/processed/traefik-service-backup.yaml
                 else
                   echo "❌ ERRO: Não foi possível aplicar o Traefik Service!"
                   exit 1
@@ -539,9 +539,9 @@ jobs:
                 echo "⚠️  NodePort ainda não foi atribuído."
               fi
             fi
-          elif [ -f k8s/usuarios/processed/traefik-service-backup.yaml ]; then
+          elif [ -f k8s/users/processed/traefik-service-backup.yaml ]; then
             echo "✅ Aplicando Traefik Service (backup)..."
-            kubectl apply -f k8s/usuarios/processed/traefik-service-backup.yaml
+            kubectl apply -f k8s/users/processed/traefik-service-backup.yaml
           else
             echo "⚠️  AVISO: Arquivo traefik-service.yaml não encontrado. O LoadBalancer não será criado."
             echo "Verifique se o arquivo k8s/traefik/service.yaml existe no repositório."
@@ -549,8 +549,8 @@ jobs:
           
           SKIP_ROLLOUT=false
           if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" = "$NEW_IMAGE" ] && [ "$CONFIGMAP_CHANGED" = "false" ] && [ "$SECRET_CHANGED" = "false" ]; then
-            READY=$(kubectl get deployment usuarios-deployment -n users -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-            DESIRED=$(kubectl get deployment usuarios-deployment -n users -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
+            READY=$(kubectl get deployment users-deployment -n users -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+            DESIRED=$(kubectl get deployment users-deployment -n users -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
             if [ "$READY" = "$DESIRED" ] && [ "$READY" != "0" ]; then
               echo "ℹ️  Deployment já está pronto. Nenhuma mudança detectada."
               SKIP_ROLLOUT=true
@@ -560,26 +560,26 @@ jobs:
           if [ "$SKIP_ROLLOUT" = "false" ]; then
             if [ -n "$CURRENT_IMAGE" ] && [ "$CURRENT_IMAGE" != "$NEW_IMAGE" ]; then
               echo "🔄 Imagem mudou. Reiniciando deployment..."
-              kubectl rollout restart deployment/usuarios-deployment -n users
+              kubectl rollout restart deployment/users-deployment -n users
             elif [ "$CONFIGMAP_CHANGED" = "true" ] || [ "$SECRET_CHANGED" = "true" ]; then
               echo "🔄 ConfigMap ou Secret mudou. Reiniciando deployment para aplicar mudanças..."
-              kubectl rollout restart deployment/usuarios-deployment -n users
+              kubectl rollout restart deployment/users-deployment -n users
             else
               echo "🔄 Aguardando deployment ficar pronto..."
             fi
           fi
           
-          if ! kubectl rollout status deployment/usuarios-deployment -n users --timeout=300s; then
+          if ! kubectl rollout status deployment/users-deployment -n users --timeout=300s; then
             echo "ERRO: Rollout falhou ou timeout"
             echo ""
             echo "=== Status dos pods ==="
             kubectl get pods -n users -o wide
             echo ""
             echo "=== Descrição do deployment ==="
-            kubectl describe deployment usuarios-deployment -n users
+            kubectl describe deployment users-deployment -n users
             echo ""
             echo "=== Logs dos pods (últimos 50 linhas) ==="
-            for pod in $(kubectl get pods -n users -l app=usuarios -o jsonpath='{.items[*].metadata.name}'); do
+            for pod in $(kubectl get pods -n users -l app=users -o jsonpath='{.items[*].metadata.name}'); do
               echo "--- Logs do pod: $pod ---"
               kubectl logs $pod -n users --tail=50 || echo "Não foi possível obter logs do pod $pod"
               echo ""
@@ -672,7 +672,7 @@ jobs:
             echo "✅ Traefik NLB Hostname: $NLB_HOSTNAME"
             echo ""
             echo "Use este hostname para configurar o API Gateway"
-            echo "As rotas devem ser configuradas com o prefixo /api/usuarios"
+            echo "As rotas devem ser configuradas com o prefixo /api/users"
             echo ""
             echo "Verifique na AWS Console (EC2 -> Load Balancers) se o NLB foi criado:"
             echo "  Nome deve começar com: k8s-kubesystem-traefik"
@@ -701,42 +701,42 @@ jobs:
           fi
           
           echo ""
-          echo "=== 4. STATUS DO SERVICE USUARIOS ==="
-          kubectl get svc usuarios-service -n users
+          echo "=== 4. STATUS DO SERVICE USERS ==="
+          kubectl get svc users-service -n users
           
           echo ""
           echo "=== 5. STATUS DO MIDDLEWARE ==="
           kubectl get middleware -A
           kubectl get middleware -n users 2>/dev/null || echo "Middleware não encontrado ou CRD não instalado"
-          if kubectl get middleware usuarios-strip -n users >/dev/null 2>&1; then
-            echo "✅ Middleware usuarios-strip encontrado:"
-            kubectl get middleware usuarios-strip -n users -o yaml
+          if kubectl get middleware users-strip -n users >/dev/null 2>&1; then
+            echo "✅ Middleware users-strip encontrado:"
+            kubectl get middleware users-strip -n users -o yaml
           else
-            echo "❌ Middleware usuarios-strip NÃO encontrado!"
+            echo "❌ Middleware users-strip NÃO encontrado!"
           fi
           
           echo ""
           echo "=== 6. VERIFICAÇÃO DO INGRESS ==="
-          INGRESS=$(kubectl get ingress usuarios-ingress -n users 2>/dev/null || echo "")
+          INGRESS=$(kubectl get ingress users-ingress -n users 2>/dev/null || echo "")
           if [ -n "$INGRESS" ]; then
             echo "✅ Ingress encontrado:"
-            kubectl get ingress usuarios-ingress -n users
+            kubectl get ingress users-ingress -n users
             echo ""
             echo "Detalhes do Ingress:"
-            kubectl describe ingress usuarios-ingress -n users
+            kubectl describe ingress users-ingress -n users
           else
             echo "❌ Ingress não encontrado!"
           fi
           
           echo ""
           echo "=== 7. TESTE DE CONECTIVIDADE ==="
-          echo "Verificando se os pods do usuarios-service estão prontos..."
-          kubectl get pods -n users -l app=usuarios
+          echo "Verificando se os pods do users-service estão prontos..."
+          kubectl get pods -n users -l app=users
           
           echo ""
           echo "Testando conectividade direta no service (port-forward)..."
           echo "Para testar manualmente:"
-          echo "  kubectl port-forward -n users svc/usuarios-service 8080:80"
+          echo "  kubectl port-forward -n users svc/users-service 8080:80"
           echo "  curl http://localhost:8080/"
           
           echo ""
@@ -744,7 +744,7 @@ jobs:
           TRAEFIK_POD=$(kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
           if [ -n "$TRAEFIK_POD" ]; then
             echo "Logs do pod Traefik: $TRAEFIK_POD"
-            kubectl logs -n kube-system $TRAEFIK_POD --tail=20 | grep -i "usuarios\|ingress\|middleware" || echo "Nenhum log relevante encontrado"
+            kubectl logs -n kube-system $TRAEFIK_POD --tail=20 | grep -i "users\|ingress\|middleware" || echo "Nenhum log relevante encontrado"
           else
             echo "⚠️  Pod do Traefik não encontrado"
           fi
